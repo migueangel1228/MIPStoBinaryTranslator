@@ -1,6 +1,9 @@
 #include <map>
 #include <vector>
 #include <string>
+#include <fstream>
+#include <iostream>
+#include <sstream>
 
 using namespace std;
 
@@ -21,7 +24,7 @@ map<string, string> registrosBinario = {
 map<string, vector<int>> instrucciones = {
     /* Formato guia: {"instruccion",{tipo (0=R ,1=I ,2=J), opcode (binario), funct (binario), cant_operandos,
                         posicion rs, pos rt, pos rd, pos shamt o inmediato}} */
-       
+
     // Tipo R
     {"add",   {0, 000000, 100000, 3, 1, 2, 0, -1}},
     {"sub",   {0, 000000, 100010, 3, 1, 2, 0, -1}},
@@ -97,3 +100,120 @@ map<string, vector<string>> tiposInstrucciones = {
     {"jr",    {"registro"}},                 // jr rs
     {"jal",   {"etiqueta"}}                // jal label
 };
+
+map<string, int> etiquetas  = {};
+vector<vector<string>> MIPS;
+
+/*
+string convertirTipoI(vector<string>) {
+
+}
+
+main() {
+    if () // verificar el tipo
+}
+*/
+
+vector<string> quitarComas(string s) {
+    vector<string> resultado;
+    stringstream ss(s);
+    string temp;
+
+    while (getline(ss, temp, ',')) {
+        resultado.push_back(temp);
+    }
+
+    return resultado;
+}
+
+
+
+bool esRegistro(const string& operando) {
+    return registrosBinario.find(operando) != registrosBinario.end();
+}
+
+bool esNumero(const string& operando) {
+    bool valido = !operando.empty();
+    for (int i = 0; i < operando.size() && valido; i++) {
+        valido = isdigit(operando[i]);
+    }
+    return valido;
+}
+
+bool esDireccionMemoria(const string& operando) {
+    bool valido = operando.size() >= 2 && operando[0] == '[' && operando.back() == ']';
+    return valido;
+}
+
+bool esTipoValido(const string& operando, const string& tipoEsperado) {
+    bool valido = false;
+
+    if (tipoEsperado == "registro") {
+        valido = esRegistro(operando);
+    }
+    if (tipoEsperado == "inmediato") {                // PUEDE SER DECIMAL O HEXA
+        valido = esNumero(operando);
+    }
+    if (tipoEsperado == "offset") {                  // DIR EN EL FORMATO 4($s3)
+        valido = esDireccionMemoria(operando);
+    }
+
+    return valido;
+}
+
+
+
+bool esInstruccionValida(int contador, string instruccion) {
+    bool ans = true;
+    string etiqueta = "";
+
+    vector<string> instruccioness = quitarComas(instruccion);
+    if (instrucciones.size() == 1 && instrucciones[0].back() == ':') {
+        etiquetas[instruccioness[0]] = contador + 0x0004;
+    }
+    else {
+        if (instrucciones.find(instruccioness[0]) != instrucciones.end()) {
+            if (instruccioness.size() - 1 != instrucciones[instruccioness[0]][3]) {
+                ans = false;
+            }
+            else {
+                for (int i = 0; i < instrucciones[instruccioness[0]][3] && ans; i++) {
+                    ans = esTipoValido(instruccioness[i+1],tiposInstrucciones[instruccioness[0]][i+1]);
+                }
+            }
+
+        }
+        else {
+            ans = false;
+        }
+    }
+
+    if (ans) {
+        MIPS.push_back(instruccioness);
+    }
+    return ans;
+}
+
+int archivoValido() {
+
+    int contador = 0x0000;
+
+    ifstream archivo("archivo.txt");
+    if (!archivo) {
+        cout << "No se pudo abrir el archivo." << endl;
+        return 1;
+    }
+
+    string linea;
+    bool valido = true;
+    while (getline(archivo, linea) && valido) {
+        valido = esInstruccionValida(contador, linea);
+        contador += 0x0004;
+    }
+
+    if (!valido) {
+        contador = -1;
+    }
+
+    return contador;
+}
