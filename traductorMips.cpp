@@ -4,6 +4,7 @@
 #include <fstream>
 #include <iostream>
 #include <sstream>
+#include <bitset>
 
 using namespace std;
 
@@ -104,15 +105,12 @@ map<string, vector<string>> tiposInstrucciones = {
 map<string, int> etiquetas  = {};
 vector<vector<string>> MIPS;
 
-/*
-string convertirTipoI(vector<string>) {
 
-}
+// string convertirTipoI(vector<string>) {
+// 
+// }
 
-main() {
-    if () // verificar el tipo
-}
-*/
+
 
 vector<string> quitarComas(string s) {
     vector<string> resultado;
@@ -216,4 +214,79 @@ int archivoValido() {
     }
 
     return contador;
+}
+string convertirTipoI(vector<string> instruccion) {
+    string opcode = bitset<6>(instrucciones[instruccion[0]][1]).to_string();
+    string rs = registrosBinario[instruccion[instrucciones[instruccion[0]][4] + 1]];
+    string rt = registrosBinario[instruccion[instrucciones[instruccion[0]][5] + 1]];
+    string immediate = bitset<16>(stoi(instruccion[instrucciones[instruccion[0]][7] + 1])).to_string();
+    return opcode + rs + rt + immediate;
+}
+
+string convertirTipoJ(vector<string> instruccion) {
+    string opcode = bitset<6>(instrucciones[instruccion[0]][1]).to_string();
+    string address = bitset<26>(etiquetas[instruccion[1]]).to_string();
+    return opcode + address;
+}
+
+string convertirTipoR(vector<string> instruccion) {
+    string opcode = bitset<6>(instrucciones[instruccion[0]][1]).to_string();
+    string rs = registrosBinario[instruccion[instrucciones[instruccion[0]][4] + 1]];
+    string rt = registrosBinario[instruccion[instrucciones[instruccion[0]][5] + 1]];
+    string rd = registrosBinario[instruccion[instrucciones[instruccion[0]][6] + 1]];
+    string shamt = bitset<5>(instrucciones[instruccion[0]][7] == -1 ? 0 : stoi(instruccion[instrucciones[instruccion[0]][7] + 1])).to_string();
+    string funct = bitset<6>(instrucciones[instruccion[0]][2]).to_string();
+    return opcode + rs + rt + rd + shamt + funct;
+}
+
+string convertirInstruccion(vector<string> instruccion) {
+    int tipo = instrucciones[instruccion[0]][0];
+    if (tipo == 0) {
+        return convertirTipoR(instruccion);
+    } else if (tipo == 1) {
+        return convertirTipoI(instruccion);
+    } else if (tipo == 2) {
+        return convertirTipoJ(instruccion);
+    }
+    return "";
+}
+
+int main() {
+    // Código para leer el archivo y validar las instrucciones
+    int contador = archivoValido();
+    if (contador == -1) {
+        cout << "Archivo no valido." << endl;
+        return 1;
+    }
+
+    // Convertir las instrucciones a binario
+    for (const auto& instruccion : MIPS) {
+        string binario = convertirInstruccion(instruccion);
+        cout << binario << endl;
+    }
+
+    // Test cases
+    vector<string> testInstruccion1 = {"addi", "$t0", "$t1", "10"};
+    vector<string> testInstruccion2 = {"j", "etiqueta"};
+    vector<string> testInstruccion3 = {"add", "$t0", "$t1", "$t2"};
+    vector<string> testInstruccion4 = {"sub", "$s0", "$s1", "$s2"};
+    vector<string> testInstruccion5 = {"lw", "$t0", "4($s3)"};
+    vector<string> testInstruccion6 = {"sw", "$t1", "8($s4)"};
+    vector<string> testInstruccion7 = {"beq", "$t0", "$t1", "label"};
+    vector<string> testInstruccion8 = {"ori", "$t2", "$t3", "15"};
+    vector<string> testInstruccion9 = {"sll", "$t4", "$t5", "2"};
+    vector<string> testInstruccion10 = {"jr", "$ra"};
+
+    cout << "Test ADDI: " << convertirInstruccion(testInstruccion1) << " (Expected: 00100001001010000000000000001010)" << endl;
+    cout << "Test J: " << convertirInstruccion(testInstruccion2) << " (Expected: 00001000000000000000000000000000)" << endl;
+    cout << "Test ADD: " << convertirInstruccion(testInstruccion3) << " (Expected: 00000001001010100100000000100000)" << endl;
+    cout << "Test SUB: " << convertirInstruccion(testInstruccion4) << " (Expected: 00000010001100011001000000100010)" << endl;
+    cout << "Test LW: " << convertirInstruccion(testInstruccion5) << " (Expected: 10001110011010000000000000000100)" << endl; // nose por que no funciona
+    cout << "Test SW: " << convertirInstruccion(testInstruccion6) << " (Expected: 10101110100101010000000000001000)" << endl;
+    cout << "Test BEQ: " << convertirInstruccion(testInstruccion7) << " (Expected: 00010001000010010000000000000000)" << endl;
+    cout << "Test ORI: " << convertirInstruccion(testInstruccion8) << " (Expected: 00110101011010100000000000001111)" << endl;
+    cout << "Test SLL: " << convertirInstruccion(testInstruccion9) << " (Expected: 00000000000010100101000001000000)" << endl;
+    cout << "Test JR: " << convertirInstruccion(testInstruccion10) << " (Expected: 00000011111000000000000000001000)" << endl;
+
+    return 0;
 }
